@@ -35,7 +35,6 @@ export default function LoginPage() {
     <div style={styles.page}>
       <div style={styles.bg} />
       <div style={styles.card}>
-        <div style={styles.logoMark}>◆</div>
         <h1 style={styles.title}>Darus Sunnah New York</h1>
         <p style={styles.subtitle}>Sign in to manage collections</p>
 

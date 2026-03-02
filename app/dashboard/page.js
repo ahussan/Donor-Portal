@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
       {/* Nav */}
       <nav style={s.nav}>
-        <span style={s.navBrand}>◆ Darus Sunnah New York</span>
+        <span style={s.navBrand}>Darus Sunnah New York</span>
         <div style={s.navLinks}>
           {isLoggedIn ? (
             <>

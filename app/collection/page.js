@@ -82,7 +82,7 @@ export default function CollectionPage() {
 
       {/* Nav */}
       <nav style={s.nav}>
-        <span style={s.navBrand}>◆ Darus Sunnah New York</span>
+        <span style={s.navBrand}>Darus Sunnah New York</span>
         <div style={s.navLinks}>
           <a href="/dashboard" style={s.navLink}>Dashboard</a>
           <button onClick={logout} style={s.navBtn}>Sign Out</button>
@@ -161,8 +161,8 @@ export default function CollectionPage() {
               {[
                 { label: 'Full Name', key: 'name', placeholder: 'Donor full name', type: 'text' },
                 { label: 'Address', key: 'address', placeholder: 'Street, City', type: 'text' },
-                { label: 'Telephone', key: 'tel', placeholder: '07X XXXXXXX', type: 'tel' },
-                { label: 'Amount (Rs.)', key: 'amount', placeholder: '0.00', type: 'number' },
+                { label: 'Telephone', key: 'tel', placeholder: '347 XXXXXXX', type: 'tel' },
+                { label: 'Amount $', key: 'amount', placeholder: '0.00', type: 'number' },
               ].map(({ label, key, placeholder, type }) => (
                 <div key={key} style={s.field}>
                   <label style={s.label}>{label}</label>
