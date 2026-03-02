@@ -106,7 +106,7 @@ export default function CollectionPage() {
           <div style={s.summaryChip}>
             <span style={s.chipLabel}>Total Collected</span>
             <span style={s.chipValue}>
-              Rs. {totalAmount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+              $ {totalAmount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div style={s.summaryChip}>
@@ -125,7 +125,7 @@ export default function CollectionPage() {
             <table style={s.table}>
               <thead>
                 <tr>
-                  {['#', 'Name', 'Address', 'Telephone', 'Amount (Rs.)'].map(h => (
+                  {['#', 'Name', 'Address', 'Telephone', 'Amount ($)'].map(h => (
                     <th key={h} style={s.th}>{h}</th>
                   ))}
                 </tr>

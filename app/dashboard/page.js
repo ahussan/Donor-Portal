@@ -57,7 +57,7 @@ export default function DashboardPage() {
           <div style={s.statCard}>
             <p style={s.statLabel}>Total Collected</p>
             <p style={s.statValue}>
-              Rs. {stats.total.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+              $ {stats.total.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
             </p>
             <div style={s.statBar} />
           </div>
