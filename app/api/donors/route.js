@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { put, list } from '@vercel/blob'
-
+import { put, head } from '@vercel/blob'
 
 const BLOB_KEY = 'donors.csv'
 const DEFAULT_CSV = 'sn,name,address,tel,amount\n'
@@ -18,13 +17,17 @@ function parseCSV(text) {
 }
 
 async function readCSV() {
-  const { blobs } = await list()
-  const blob = blobs.find(b => b.pathname === BLOB_KEY)
-  if (!blob) return DEFAULT_CSV
-  const res = await fetch(blob.url)
-  return await res.text()
+  try {
+    const blob = await head(BLOB_KEY, { token: process.env.BLOB_READ_WRITE_TOKEN })
+    const res = await fetch(blob.url, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    })
+    return await res.text()
+  } catch (e) {
+    return DEFAULT_CSV
+  }
 }
-
 
 async function writeCSV(text) {
   await put(BLOB_KEY, text, {
@@ -50,7 +53,7 @@ export async function POST(req) {
     const body = await req.json()
     const { name, address, tel, amount } = body
 
-    if (!name || !address || !tel || !amount) {
+    if (!name || !amount) {
       return NextResponse.json({ error: 'All fields required' }, { status: 400 })
     }
 
@@ -69,10 +72,41 @@ export async function POST(req) {
     const updatedCSV = text.trimEnd() + '\n' + newRow
 
     await writeCSV(updatedCSV)
-
+    await new Promise(r => setTimeout(r, 300))
     return NextResponse.json({ success: true, sn: nextSn })
   } catch (e) {
     console.error('POST /api/donors error:', e)
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+  }
+}
+
+export async function PUT(req) {
+  try {
+    const body = await req.json()
+    const { sn, name, address, tel, amount } = body
+
+    if (!sn || !name || !amount) {
+      return NextResponse.json({ error: 'All fields required' }, { status: 400 })
+    }
+
+    let text = DEFAULT_CSV
+    try { text = await readCSV() } catch (_) {}
+
+    const donors = parseCSV(text)
+    const idx = donors.findIndex(d => String(d.sn) === String(sn))
+    if (idx === -1) return NextResponse.json({ error: 'Donor not found' }, { status: 404 })
+
+    const safe = v => String(v).replace(/,/g, ';')
+    donors[idx] = { sn, name: safe(name), address: safe(address || ''), tel: safe(tel || ''), amount: safe(amount) }
+
+    const updatedCSV = 'sn,name,address,tel,amount\n' +
+      donors.map(d => `${d.sn},${d.name},${d.address},${d.tel},${d.amount}`).join('\n')
+
+    await writeCSV(updatedCSV)
+    await new Promise(r => setTimeout(r, 300))
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error('PUT /api/donors error:', e)
+    return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
   }
 }
