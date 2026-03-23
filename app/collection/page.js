@@ -124,6 +124,8 @@ export default function CollectionPage() {
 
       <main style={s.main}>
         <div style={s.header}>
+
+          
           <div>
             <h2 style={s.title}>Donor Details and Committed Amounts for Tarawhee</h2>
             <p style={s.subtitle}>Manage and track all donor contributions</p>
@@ -134,6 +136,33 @@ export default function CollectionPage() {
           </div>
         </div>
 
+
+        {/* Distribution Table */}
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={{...s.th, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>Distribution</th>
+                <th style={{...s.th, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>Amount ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: 'Hafeez Mufti Kawsar Ahmed ', amount: "4000.00" },
+                { name: 'Hafeez Minhazur Rahman Choudhury', amount: "4000.00" },
+                { name: 'Added to the Mosque Fund (Money given to Humayun Bhi)', amount: "181.00" },
+              ].map((row, i) => (
+                <tr key={row.name} style={i % 2 === 0 ? s.trEven : s.trOdd}>
+                  <td style={{...s.td, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>{row.name}</td>
+                  <td style={{...s.td, color: '#c9a84c', fontWeight: 'bold', fontFamily: 'Arial, sans-serif'}}>
+                    {row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
         <div style={s.summaryRow}>
           <div style={s.summaryChip}>
             <span style={s.chipLabel}>Total Collected</span>

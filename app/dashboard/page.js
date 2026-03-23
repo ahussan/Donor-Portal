@@ -44,8 +44,33 @@ export default function DashboardPage() {
           <div style={s.logoCircle}>
             <span style={s.logoEmoji}>🤝</span>
           </div>
-          <h1 style={s.orgName}>Khatam-ul-Quran Hadiya Collection</h1>
-          <p style={s.tagline}>Contribution for Hafiz for their Khidmat during ramadan</p>
+          <h1 style={s.orgName}>Khatam-ul-Quran Hadiya Collection and Distribution</h1>
+        </div>
+
+        {/* Distribution Table */}
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={{...s.th, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>Distribution</th>
+                <th style={{...s.th, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>Amount ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: 'Hafeez Mufti Kawsar Ahmed ', amount: "4000.00" },
+                { name: 'Hafeez Minhazur Rahman Choudhury', amount: "4000.00" },
+                { name: 'Added to the Mosque Fund (Money given to Humayun Bhi)', amount: "181.00" },
+              ].map((row, i) => (
+                <tr key={row.name} style={i % 2 === 0 ? s.trEven : s.trOdd}>
+                  <td style={{...s.td, fontFamily: 'Arial, sans-serif', fontWeight: 'bold'}}>{row.name}</td>
+                  <td style={{...s.td, color: '#c9a84c', fontWeight: 'bold', fontFamily: 'Arial, sans-serif'}}>
+                    {row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div style={s.statsRow}>
@@ -68,7 +93,7 @@ export default function DashboardPage() {
             <table style={s.table}>
               <thead>
                 <tr>
-                  {['#', 'Name','Amount ($)'].map(h => (
+                  {['#', 'Donor Name','Collected Amount ($)'].map(h => (
                     <th key={h} style={s.th}>{h}</th>
                   ))}
                 </tr>
