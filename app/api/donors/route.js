@@ -1,79 +1,62 @@
 import { NextResponse } from 'next/server'
-import { put, head } from '@vercel/blob'
+import { prisma } from '@/lib/prisma'
+import { isAdmin } from '@/lib/auth'
 
-const BLOB_KEY = 'donors.csv'
-const DEFAULT_CSV = 'sn,name,address,tel,amount\n'
+export const dynamic = 'force-dynamic'
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n')
-  if (lines.length < 2) return []
-  const headers = lines[0].split(',')
-  return lines.slice(1).map(line => {
-    const values = line.split(',')
-    const obj = {}
-    headers.forEach((h, i) => { obj[h.trim()] = values[i]?.trim() || '' })
-    return obj
-  }).filter(r => r.sn)
-}
+const unauthorized = () => NextResponse.json({ error: 'Please sign in to make changes.' }, { status: 401 })
 
-async function readCSV() {
-  try {
-    const blob = await head(BLOB_KEY, { token: process.env.BLOB_READ_WRITE_TOKEN })
-    const res = await fetch(blob.url, {
-      cache: 'no-store',
-      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
-    })
-    return await res.text()
-  } catch (e) {
-    return DEFAULT_CSV
+function serialize(d) {
+  return {
+    sn: d.sn,
+    year: d.year,
+    name: d.name,
+    address: d.address,
+    tel: d.tel,
+    amount: d.amount.toString(),
   }
 }
 
-async function writeCSV(text) {
-  await put(BLOB_KEY, text, {
-    access: 'public',
-    contentType: 'text/csv',
-    addRandomSuffix: false,
-  })
+function parseAmount(v) {
+  const n = parseFloat(v)
+  return Number.isFinite(n) && n > 0 ? n : null
 }
 
-export async function GET() {
+function parseYear(v) {
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 2000 && n <= 2100 ? n : null
+}
+
+export async function GET(req) {
   try {
-    const text = await readCSV()
-    const donors = parseCSV(text)
-    return NextResponse.json({ donors })
+    const year = parseYear(new URL(req.url).searchParams.get('year'))
+    if (year === null) return NextResponse.json({ donors: [] })
+    const donors = await prisma.donor.findMany({ where: { year }, orderBy: { sn: 'asc' } })
+    return NextResponse.json({ donors: donors.map(serialize) })
   } catch (e) {
     console.error('GET /api/donors error:', e)
-    return NextResponse.json({ donors: [] })
+    return NextResponse.json({ error: 'Failed to load donors' }, { status: 500 })
   }
 }
 
 export async function POST(req) {
+  if (!isAdmin()) return unauthorized()
   try {
-    const body = await req.json()
-    const { name, address, tel, amount } = body
+    const { year, name, address, tel, amount } = await req.json()
+    const y = parseYear(year)
+    const amt = parseAmount(amount)
 
-    if (!name || !amount) {
-      return NextResponse.json({ error: 'All fields required' }, { status: 400 })
+    if (y === null || !name || amt === null) {
+      return NextResponse.json({ error: 'Year, name and a positive amount are required' }, { status: 400 })
     }
 
-    let text = DEFAULT_CSV
-    try { text = await readCSV() } catch (_) {}
-
-    const donors = parseCSV(text)
-    const nextSn = donors.length > 0
-      ? Math.max(...donors.map(d => parseInt(d.sn) || 0)) + 1
-      : 1
-
-    const safe = v => String(v).replace(/,/g, ';')
-    const newRow = `${nextSn},${safe(name)},${safe(address)},${safe(tel)},${safe(amount)}`
-
-    if (!text.startsWith('sn,')) text = DEFAULT_CSV
-    const updatedCSV = text.trimEnd() + '\n' + newRow
-
-    await writeCSV(updatedCSV)
-    await new Promise(r => setTimeout(r, 300))
-    return NextResponse.json({ success: true, sn: nextSn })
+    const donor = await prisma.$transaction(async tx => {
+      await tx.year.upsert({ where: { year: y }, update: {}, create: { year: y } })
+      return tx.donor.create({
+        data: { year: y, name: name.trim(), address: (address || '').trim(), tel: (tel || '').trim(), amount: amt },
+      })
+    })
+    return NextResponse.json({ success: true, sn: donor.sn })
   } catch (e) {
     console.error('POST /api/donors error:', e)
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
@@ -81,32 +64,46 @@ export async function POST(req) {
 }
 
 export async function PUT(req) {
+  if (!isAdmin()) return unauthorized()
   try {
-    const body = await req.json()
-    const { sn, name, address, tel, amount } = body
+    const { sn, name, address, tel, amount } = await req.json()
+    const amt = parseAmount(amount)
 
-    if (!sn || !name || !amount) {
-      return NextResponse.json({ error: 'All fields required' }, { status: 400 })
+    if (!sn || !name || amt === null) {
+      return NextResponse.json({ error: 'Name and a positive amount are required' }, { status: 400 })
     }
 
-    let text = DEFAULT_CSV
-    try { text = await readCSV() } catch (_) {}
-
-    const donors = parseCSV(text)
-    const idx = donors.findIndex(d => String(d.sn) === String(sn))
-    if (idx === -1) return NextResponse.json({ error: 'Donor not found' }, { status: 404 })
-
-    const safe = v => String(v).replace(/,/g, ';')
-    donors[idx] = { sn, name: safe(name), address: safe(address || ''), tel: safe(tel || ''), amount: safe(amount) }
-
-    const updatedCSV = 'sn,name,address,tel,amount\n' +
-      donors.map(d => `${d.sn},${d.name},${d.address},${d.tel},${d.amount}`).join('\n')
-
-    await writeCSV(updatedCSV)
-    await new Promise(r => setTimeout(r, 300))
+    try {
+      await prisma.donor.update({
+        where: { sn: Number(sn) },
+        data: { name: name.trim(), address: (address || '').trim(), tel: (tel || '').trim(), amount: amt },
+      })
+    } catch (e) {
+      if (e.code === 'P2025') return NextResponse.json({ error: 'Donor not found' }, { status: 404 })
+      throw e
+    }
     return NextResponse.json({ success: true })
   } catch (e) {
     console.error('PUT /api/donors error:', e)
     return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req) {
+  if (!isAdmin()) return unauthorized()
+  try {
+    const sn = Number(new URL(req.url).searchParams.get('sn'))
+    if (!Number.isInteger(sn)) return NextResponse.json({ error: 'Invalid donor' }, { status: 400 })
+
+    try {
+      await prisma.donor.delete({ where: { sn } })
+    } catch (e) {
+      if (e.code === 'P2025') return NextResponse.json({ error: 'Donor not found' }, { status: 404 })
+      throw e
+    }
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error('DELETE /api/donors error:', e)
+    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
   }
 }

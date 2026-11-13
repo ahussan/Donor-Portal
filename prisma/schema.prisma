@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model Donor {
+  sn        Int      @id @default(autoincrement())
+  year      Int      @default(2026)
+  name      String
+  address   String   @default("")
+  tel       String   @default("")
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([year])
+}
+
+// Years that show up as tabs (a year can exist before it has any donors)
+model Year {
+  year Int @id
+}
